@@ -8,6 +8,7 @@ import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:ui' as ui;
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class DavinciCapture {
   /// * If the widget is in the widget tree, use this method.
@@ -20,7 +21,9 @@ class DavinciCapture {
       bool saveToDevice = false,
       String? albumName,
       double? pixelRatio,
-      bool returnImageUint8List = false}) async {
+      bool returnImageUint8List = false,
+      bool share = false,
+      String? messageShare}) async {
     try {
       pixelRatio ??= ui.window.devicePixelRatio;
 
@@ -36,7 +39,9 @@ class DavinciCapture {
           returnImageUint8List: returnImageUint8List,
           openFilePreview: openFilePreview,
           repaintBoundary: repaintBoundary,
-          pixelRatio: pixelRatio);
+          pixelRatio: pixelRatio,
+          share: share,
+          messageShare: messageShare);
     } catch (e) {
       /// if the above process is failed, the error is printed.
       print(e);
@@ -146,7 +151,9 @@ class DavinciCapture {
       returnImageUint8List,
       openFilePreview,
       repaintBoundary,
-      pixelRatio}) async {
+      pixelRatio,
+      share,
+      messageShare}) async {
     /// the boundary is converted to Image.
     final ui.Image image =
         await repaintBoundary.toImage(pixelRatio: pixelRatio);
@@ -159,7 +166,7 @@ class DavinciCapture {
     final u8Image = byteData!.buffer.asUint8List();
 
     if (saveToDevice) {
-      _saveImageToDevice(albumName, fileName);
+      _saveImageToDevice(albumName, fileName, u8Image, share, messageShare);
     }
 
     /// If the returnImageUint8List is true, return the image as uInt8List
@@ -192,15 +199,22 @@ class DavinciCapture {
   }
 
   /// To save the images locally
-  static void _saveImageToDevice(String? album, String imageName) async {
+  static void _saveImageToDevice(String? album, String imageName, Uint8List u8Image, bool share, String? messageShare) async {
     /// getting the temp directory of the app.
     String dir = (await getApplicationDocumentsDirectory()).path;
 
     /// Saving the file with the file name in temp directory.
     File file = File('$dir/$imageName.png');
 
+    await file.writeAsBytes(u8Image);
+
     /// The image is saved with the file path and to the album if defined,
     /// if the album is null, it saves to the all pictures.
     await GallerySaver.saveImage(file.path, albumName: album);
+
+    if(share) {
+      await Share.shareFiles([file.path], text: messageShare);
+    }
+
   }
 }
